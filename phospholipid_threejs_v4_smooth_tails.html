@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>磷脂双分子层 · Three.js 3D 交互教学网页</title>
+  <style>
+    :root{
+      --bg:#07121f;
+      --panel:#0d1e31;
+      --panel2:#102640;
+      --line:#274564;
+      --text:#f3f9ff;
+      --muted:#9cb0c5;
+      --cyan:#43ddd2;
+      --blue:#4fa3ff;
+      --purple:#ab82ff;
+      --gold:#ffd166;
+      --orange:#f1a44d;
+      --green:#69f2b2;
+      --shadow:0 24px 60px rgba(0,0,0,.35);
+      --radius:22px;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      color:var(--text);
+      font-family:Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+      background:
+        radial-gradient(circle at 18% 10%, rgba(67,221,210,.08), transparent 22%),
+        radial-gradient(circle at 82% 16%, rgba(171,130,255,.08), transparent 25%),
+        linear-gradient(180deg,#06111d,#081523 50%,#091421 100%);
+    }
+    .wrap{width:min(1280px,calc(100% - 32px));margin:0 auto}
+    .hero{padding:64px 0 34px}
+    .eyebrow{
+      display:inline-flex;align-items:center;gap:10px;
+      border-radius:999px;padding:8px 13px;
+      border:1px solid rgba(67,221,210,.25);
+      background:rgba(67,221,210,.07);
+      color:#ccfffb;font-size:13px;letter-spacing:.08em
+    }
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 14px var(--cyan)}
+    h1{font-size:clamp(38px,6vw,70px);line-height:1.02;letter-spacing:-.04em;margin:20px 0 16px;max-width:930px}
+    .hero p{max-width:900px;color:var(--muted);font-size:18px;line-height:1.8;margin:0}
+    .section{padding:26px 0 54px}
+    .section-head{
+      display:grid;grid-template-columns:124px 1fr;gap:20px;align-items:start;margin-bottom:18px
+    }
+    .num{padding-top:7px;color:var(--cyan);font-size:14px;font-weight:800;letter-spacing:.16em}
+    .section h2{margin:0 0 8px;font-size:34px;letter-spacing:-.03em}
+    .section-desc{margin:0;max-width:900px;color:var(--muted);line-height:1.75}
+    .grid-2{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(360px,.88fr);gap:22px}
+    .card{
+      position:relative;
+      border:1px solid rgba(255,255,255,.08);
+      background:linear-gradient(180deg,rgba(16,38,64,.92),rgba(10,24,40,.96));
+      border-radius:28px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .card:before{
+      content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+      background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 18%,transparent 82%,rgba(255,255,255,.03));
+      mix-blend-mode:screen
+    }
+    .scene-card{min-height:600px;padding:14px}
+    .scene-toolbar{
+      position:relative;z-index:2;
+      display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+      padding:4px 4px 12px
+    }
+    .scene-toolbar strong{font-size:16px}
+    .subtle{color:var(--muted);font-size:12px;line-height:1.4;margin-top:6px}
+    .canvas-shell{
+      height:520px;border-radius:20px;overflow:hidden;position:relative;
+      border:1px solid rgba(255,255,255,.06);
+      background:
+        radial-gradient(circle at 50% 40%, rgba(67,221,210,.06), transparent 40%),
+        linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01));
+    }
+    canvas.webgl{width:100%;height:100%;display:block}
+    .overlay{
+      position:absolute;left:12px;top:12px;z-index:3;display:flex;flex-direction:column;gap:8px;max-width:240px
+    }
+    .chip{
+      display:inline-flex;align-items:center;gap:6px;
+      padding:7px 10px;border-radius:999px;
+      background:rgba(7,17,31,.72);backdrop-filter:blur(10px);
+      border:1px solid rgba(255,255,255,.08);
+      color:#d7e5f2;font-size:11px
+    }
+    .legend-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+    .panel-stack{display:flex;flex-direction:column;gap:16px}
+    .side-card{padding:18px}
+    .structure-item{
+      display:grid;grid-template-columns:36px 1fr;gap:12px;align-items:start;
+      padding:14px 12px;border-radius:14px;transition:.2s
+    }
+    .structure-item:hover{background:rgba(255,255,255,.04);transform:translateX(3px)}
+    .structure-item+.structure-item{border-top:1px solid rgba(255,255,255,.06)}
+    .badge{
+      width:28px;height:28px;border-radius:8px;display:grid;place-items:center;
+      background:rgba(67,221,210,.12);border:1px solid rgba(67,221,210,.25);
+      color:#cdfffc;font-size:12px;font-weight:800
+    }
+    .structure-item h3,.note-card h4{margin:0 0 5px}
+    .structure-item p,.note-card p{margin:0;color:var(--muted);font-size:13px;line-height:1.58}
+    .notes{display:grid;gap:12px}
+    .note-card{padding:17px 18px;position:relative}
+    .note-card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--cyan)}
+
+    .controls{
+      display:flex;gap:8px;flex-wrap:wrap;position:relative;z-index:3
+    }
+    .btn{
+      appearance:none;border:1px solid rgba(255,255,255,.1);
+      background:#16324f;color:var(--text);
+      padding:10px 12px;border-radius:12px;cursor:pointer;transition:.2s
+    }
+    .btn:hover{transform:translateY(-1px);background:#1b3c5f}
+    .btn.primary{background:linear-gradient(135deg,#128f97,#226cae);border-color:rgba(67,221,210,.36)}
+    .btn.ghost{background:transparent}
+    .btn.active{outline:2px solid rgba(67,221,210,.34)}
+
+    .runtime-status{position:absolute;inset:0;z-index:12;display:grid;place-items:center;padding:24px;text-align:center;background:rgba(7,18,31,.82);color:#d9e8f5;font-size:13px;line-height:1.6}
+    .runtime-status[data-error="1"]{color:#ffd4d4;background:rgba(44,12,18,.88)}
+    .small-help{
+      position:absolute;right:12px;bottom:12px;z-index:3;
+      max-width:330px;padding:12px 14px;border-radius:14px;
+      background:rgba(7,17,31,.76);backdrop-filter:blur(12px);
+      border:1px solid rgba(255,255,255,.08);
+      color:var(--muted);font-size:12px;line-height:1.6
+    }
+    .small-help b{color:var(--text)}
+    .info-box{
+      padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.07);color:var(--muted);font-size:13px;line-height:1.62
+    }
+    .scenario-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px;position:relative;z-index:2}
+    .scenario-card{padding:15px 16px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07)}
+    .scenario-card strong{display:block;font-size:14px;margin-bottom:7px;color:var(--text)}
+    .scenario-card p{margin:0;color:var(--muted);font-size:12px;line-height:1.65}
+
+    .viewer-tools{
+      display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;
+      margin-bottom:10px
+    }
+    .segment{display:flex;gap:8px;flex-wrap:wrap}
+    footer{padding:18px 0 54px;color:#7088a0;font-size:12px;text-align:center}
+    @media(max-width:980px){
+      .grid-2,.section-head,.scenario-grid{grid-template-columns:1fr}
+      .viewer-tools{align-items:flex-start}
+    }
+    @media(max-width:640px){
+      .wrap{width:min(100% - 20px,1280px)}
+      .hero{padding-top:42px}
+      h1{font-size:42px}
+      .canvas-shell{height:460px}
+      .scene-card{min-height:auto}
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <div class="eyebrow"><span class="dot"></span> WEBGL / THREE.JS · 3D INTERACTIVE TEACHING PAGE</div>
+      <h1>磷脂双分子层<br>真正的 3D 交互教学网页</h1>
+      <p>
+        这是一个基于 <b>WebGL / Three.js</b> 的三维网页模型：你可以自由旋转视角，选择分子或膜对象后进行拖拽和旋转，
+        观察磷脂分子的三维结构、在不同环境中的自组装，以及含胆固醇和跨膜蛋白的磷脂双分子层。
+      </p>
+    </div>
+  </header>
+
+  <main class="wrap">
+
+    <section class="section" id="module1">
+      <div class="section-head">
+        <div class="num">MODULE 01</div>
+        <div>
+          <h2>分子结构拆解 · 真实 3D 模型</h2>
+          <p class="section-desc">
+            左侧是可自由旋转的 3D 磷脂分子教学模型。为了突出两亲性，只保留“亲水头部 + 两条疏水尾部”两部分，其中一条尾链用弯折表示不饱和脂肪酸。
+          </p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card scene-card">
+          <div class="scene-toolbar">
+            <div>
+              <strong>单个磷脂分子 · 3D 查看器</strong>
+              <div class="subtle">左键旋转视角 · 滚轮缩放 · 右键平移</div>
+            </div>
+            <div class="controls">
+              <button class="btn ghost" id="m1ResetView">重置视角</button>
+              <button class="btn ghost" id="m1AutoSpin">自动旋转：开</button>
+            </div>
+          </div>
+          <div class="canvas-shell">
+            <div class="overlay">
+              <div class="chip"><span class="legend-dot" style="background:#43ddd2"></span>亲水头部</div>
+              <div class="chip"><span class="legend-dot" style="background:#ffd166"></span>疏水尾部</div>
+            </div>
+            <canvas id="sceneMolecule" class="webgl"></canvas>
+            <div class="small-help">
+              <b>教学提示：</b> 可从多个方向观察分子。头部是极性的、亲水的；尾部是非极性的、疏水的。
+              其中一条不饱和脂肪酸尾出现弯折，这会影响膜的堆积紧密程度和流动性。
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-stack">
+          <div class="card side-card">
+            <div class="structure-item">
+              <div class="badge">01</div>
+              <div><h3>亲水头部 Hydrophilic head</h3><p>用一个蓝色球体整体表示磷脂的极性头部。教学重点是它能够与水相互作用、倾向朝向水环境。</p></div>
+            </div>
+            <div class="structure-item">
+              <div class="badge">02</div>
+              <div><h3>疏水尾部 Hydrophobic tails</h3><p>两条非极性脂肪酸尾倾向远离水；其中一条用弯折表示不饱和脂肪酸尾。</p></div>
+            </div>
+          </div>
+
+          <div class="notes">
+            <div class="card note-card"><h4>原理卡 01 · 两亲性</h4><p>磷脂分子兼具亲水头和疏水尾，因此会在不同溶剂环境中寻找更稳定的排列方式。</p></div>
+            <div class="card note-card"><h4>原理卡 02 · 疏水效应</h4><p>在水相中，疏水尾彼此靠近并尽量远离水，亲水头则朝向两侧水环境。</p></div>
+            <div class="card note-card"><h4>原理卡 03 · 膜流动性</h4><p>不饱和尾链弯折使分子不易紧密堆积，是影响细胞膜流动性的重要因素之一。</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="module2">
+      <div class="section-head">
+        <div class="num">MODULE 02</div>
+        <div>
+          <h2>水中自组装 · 可拖拽的 3D 分子实验台</h2>
+          <p class="section-desc">
+            你可以往场景中添加 3D 磷脂分子，并在三种环境之间切换：水相、非极性油相（含少量水）以及油—水界面。
+            点击对象后可拖拽或旋转，再通过“自动自组装”观察双分子层、反胶束和界面单分子层三种典型排列。
+          </p>
+        </div>
+      </div>
+
+      <div class="card scene-card">
+        <div class="viewer-tools">
+          <div>
+            <strong>3D 实验台</strong>
+            <div class="subtle">点选分子后，可切换“移动 / 旋转”模式进行操作</div>
+          </div>
+          <div class="controls">
+            <button class="btn primary active" id="labModeWater">水相：双分子层</button>
+            <button class="btn ghost" id="labModeOil">油相：反胶束</button>
+            <button class="btn ghost" id="labModeInterface">油—水界面：单分子层</button>
+            <button class="btn ghost" id="labAdd">添加分子</button>
+            <button class="btn ghost" id="labClear">清空</button>
+            <button class="btn ghost" id="labTransformTranslate">移动模式</button>
+            <button class="btn ghost" id="labTransformRotate">旋转模式</button>
+            <button class="btn primary" id="labAssemble">自动自组装</button>
+            <button class="btn ghost" id="labResetView">重置视角</button>
+          </div>
+        </div>
+        <div class="canvas-shell">
+          <div class="overlay">
+            <div class="chip" id="labEnvironmentChip"><span class="legend-dot" style="background:#4fa3ff"></span>水相 · 双分子层</div>
+            <div class="chip"><span class="legend-dot" style="background:#43ddd2"></span>选中后可操作分子</div>
+          </div>
+          <canvas id="sceneLab" class="webgl"></canvas>
+          <div class="small-help" id="labHelp">
+            <b>水相：</b> 磷脂的亲水头朝向水环境，疏水尾彼此靠近，形成双分子层趋势。
+          </div>
+        </div>
+
+        <div class="scenario-grid">
+          <div class="scenario-card">
+            <strong>① 水相 · 双分子层</strong>
+            <p>亲水头朝向两侧水环境，疏水尾藏在内部并彼此靠近，这是生物膜最核心的排列方式。</p>
+          </div>
+          <div class="scenario-card">
+            <strong>② 非极性油相（含少量水）· 反胶束</strong>
+            <p>疏水尾朝向外侧油相，亲水头聚向内部，并可包围少量水形成“水核”。若完全无水，实际聚集形态还会受脂质种类、溶剂和浓度影响。</p>
+          </div>
+          <div class="scenario-card">
+            <strong>③ 油—水界面 · 单分子层</strong>
+            <p>教学简化模型中，磷脂排列在界面：亲水头进入水相，疏水尾伸向油相。注意：洗洁精去油更典型的机制是表面活性剂在水中形成胶束包裹油污。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="module3">
+      <div class="section-head">
+        <div class="num">MODULE 03</div>
+        <div>
+          <h2>双分子层剖面主视图 · 可自由操控的 3D 膜模型</h2>
+          <p class="section-desc">
+            1188 宽 3D 膜查看器：你可以从整体、局部、侧视等不同视角观察完整的磷脂双分子层。
+            膜模型中包含胆固醇和贯穿膜层的跨膜蛋白，并支持直接对膜对象进行移动 / 旋转。
+          </p>
+        </div>
+      </div>
+
+      <div class="card scene-card">
+        <div class="viewer-tools">
+          <div>
+            <strong>3D 膜查看器</strong>
+            <div class="subtle">自由视角 + 对象操控 + 快速视图切换</div>
+          </div>
+          <div class="controls">
+            <button class="btn primary" id="memViewOverall">整体视图</button>
+            <button class="btn ghost" id="memViewLocal">局部放大</button>
+            <button class="btn ghost" id="memViewSide">侧视图</button>
+            <button class="btn ghost" id="memViewTop">俯视图</button>
+            <button class="btn ghost" id="memTransformTranslate">移动膜体</button>
+            <button class="btn ghost" id="memTransformRotate">旋转膜体</button>
+            <button class="btn ghost" id="memResetObj">膜体归位</button>
+            <button class="btn ghost" id="memResetView">重置视角</button>
+          </div>
+        </div>
+        <div class="canvas-shell" style="height:560px">
+          <div class="overlay">
+            <div class="chip"><span class="legend-dot" style="background:#4fa3ff"></span>亲水头部</div>
+            <div class="chip"><span class="legend-dot" style="background:#f1a44d"></span>脂肪酸尾</div>
+            <div class="chip"><span class="legend-dot" style="background:#ffd166"></span>胆固醇</div>
+            <div class="chip"><span class="legend-dot" style="background:#ab82ff"></span>跨膜蛋白</div>
+          </div>
+          <canvas id="sceneMembrane" class="webgl"></canvas>
+          <div class="small-help">
+            <b>教学提示：</b> 质膜的核心骨架是磷脂双分子层。亲水头朝向两侧水环境，疏水尾朝向膜内部。
+            胆固醇嵌入脂肪酸尾之间，跨膜蛋白则贯穿整个膜层。
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px" class="info-box">
+        <b>当前版本说明：</b> 这是一版真正使用 Three.js 渲染的 3D 教学网页，支持 WebGL 场景、自由视角、对象选择以及页面内置的拖拽/旋转对象控制。
+        如果你后续需要，我还可以继续升级成：
+        <br>① 更精细的分子比例与材质表现；② 膜蛋白类型区分；③ 文字热点标注；④ 章节切换动画；⑤ 课堂答题 / 引导式交互模式。
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    说明：该网页使用 Three.js 渲染。分子结构采用“蓝色亲水头 + 两条疏水尾”的教学简化模型；油相反胶束情形特指非极性油相中存在少量水的典型模型。
+  </footer>
+
+  <script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.161.0/+esm';
+
+const color={bg:0x07121f,cyan:0x43ddd2,purple:0xab82ff,gold:0xffd166,orange:0xf1a44d,blue:0x4fa3ff,protein:0xab82ff,glassBlue:0x6fb8ff,oil:0xf0bf68};
+
+function setStatus(canvas,msg,isError=false){
+  const shell=canvas.parentElement;
+  let el=shell.querySelector('.runtime-status');
+  if(!el){el=document.createElement('div');el.className='runtime-status';shell.appendChild(el)}
+  el.textContent=msg;el.dataset.error=isError?'1':'0';
+}
+function clearStatus(canvas){const el=canvas.parentElement.querySelector('.runtime-status');if(el)el.remove()}
+function makeRenderer(canvas){
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  renderer.outputColorSpace=THREE.SRGBColorSpace;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=1.05;
+  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  return renderer;
+}
+function makeLights(scene){
+  scene.add(new THREE.HemisphereLight(0xbfefff,0x1a2840,1.15));
+  const a=new THREE.DirectionalLight(0xffffff,1.25);a.position.set(8,10,7);a.castShadow=true;scene.add(a);
+  const b=new THREE.DirectionalLight(0x99bbff,.55);b.position.set(-8,4,-6);scene.add(b);
+  const p=new THREE.PointLight(0x53e7de,.65,30);p.position.set(0,2,4);scene.add(p);
+}
+function makeGridFloor(size=16){
+  const g=new THREE.Group();const grid=new THREE.GridHelper(size,size,0x264c68,0x20364a);grid.position.y=-2.4;grid.material.transparent=true;grid.material.opacity=.42;g.add(grid);
+  const plane=new THREE.Mesh(new THREE.PlaneGeometry(size,size),new THREE.MeshPhongMaterial({color:0x0d1d31,transparent:true,opacity:.16,side:THREE.DoubleSide}));
+  plane.rotation.x=-Math.PI/2;plane.position.y=-2.42;plane.receiveShadow=true;g.add(plane);return g;
+}
+function cylinderBetween(a,b,r,mat){
+  const dir=new THREE.Vector3().subVectors(b,a),len=dir.length();
+  const mesh=new THREE.Mesh(new THREE.CylinderGeometry(r,r,len,14),mat);mesh.position.copy(a.clone().add(b).multiplyScalar(.5));
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.normalize());return mesh;
+}
+function createPhospholipid(scale=1){
+  const root=new THREE.Group();root.userData.kind='molecule';
+  const headMat=new THREE.MeshPhysicalMaterial({color:0x4fa3ff,roughness:.20,clearcoat:.42,emissive:0x153f72,emissiveIntensity:.10});
+  const tailMat=new THREE.MeshPhysicalMaterial({color:color.gold,roughness:.46,clearcoat:.08});
+
+  // 教学简化：整个亲水头部只用一个蓝色球体表示
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.50,32,32),headMat);
+  head.position.set(0,1.18,0);
+  root.add(head);
+
+  function tail(points){
+    // 连续光滑的疏水尾：不再用短圆柱和小球节点拼接
+    const curve=new THREE.CatmullRomCurve3(points,false,'centripetal',.35);
+    const tube=new THREE.Mesh(
+      new THREE.TubeGeometry(curve,48,.075,12,false),
+      tailMat
+    );
+    root.add(tube);
+  }
+
+  // 饱和尾：近似较直
+  tail([
+    new THREE.Vector3(-.18,.72,0),
+    new THREE.Vector3(-.22,.28,.01),
+    new THREE.Vector3(-.25,-.20,.04),
+    new THREE.Vector3(-.28,-.68,.07),
+    new THREE.Vector3(-.30,-1.17,.10),
+    new THREE.Vector3(-.28,-1.66,.14)
+  ]);
+
+  // 不饱和尾：用明显弯折表达顺式双键造成的 kink
+  tail([
+    new THREE.Vector3(.18,.72,0),
+    new THREE.Vector3(.23,.28,-.02),
+    new THREE.Vector3(.28,-.15,-.05),
+    new THREE.Vector3(.13,-.54,.18),
+    new THREE.Vector3(.43,-.88,.30),
+    new THREE.Vector3(.57,-1.27,.38),
+    new THREE.Vector3(.64,-1.64,.45)
+  ]);
+
+  root.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
+  root.scale.setScalar(scale);
+  return root;
+}
+function createWaterBox(w=7,h=4,d=5,oil=false){
+  return new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshPhysicalMaterial({color:oil?color.oil:color.glassBlue,transparent:true,opacity:.11,roughness:.08,transmission:.50,clearcoat:.35,side:THREE.DoubleSide}));
+}
+function createCholesterol(scale=1){
+  const g=new THREE.Group();g.userData.kind='cholesterol';const mat=new THREE.MeshPhysicalMaterial({color:color.gold,roughness:.38,clearcoat:.1});
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.10,12,12),new THREE.MeshBasicMaterial({color:0xfff1af}));head.position.y=.40;g.add(head);
+  [0,.18,.36].forEach((off)=>{const b=new THREE.Mesh(new THREE.BoxGeometry(.18,.18,.12),mat);b.position.y=.18-off;g.add(b)});
+  const tail=new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,.32,10),mat);tail.position.y=-.32;tail.rotation.z=.28;g.add(tail);g.scale.setScalar(scale);return g;
+}
+function createProtein(scale=1){
+  const g=new THREE.Group();g.userData.kind='protein';const mat=new THREE.MeshPhysicalMaterial({color:color.protein,roughness:.28,clearcoat:.12});const pts=[];
+  for(let i=0;i<10;i++){const t=i/9;pts.push(new THREE.Vector3(Math.sin(t*Math.PI*2.2)*.28,1.8-t*3.6,Math.cos(t*Math.PI*2.2)*.16))}
+  for(let i=0;i<pts.length-1;i++)g.add(cylinderBetween(pts[i],pts[i+1],.22,mat));
+  [pts[0],pts[pts.length-1]].forEach(pt=>{const s=new THREE.Mesh(new THREE.SphereGeometry(.28,16,16),mat);s.position.copy(pt);g.add(s)});g.scale.setScalar(scale);return g;
+}
+function createBilayer(rows=5,cols=12,sx=.82,sz=.82){
+  const group=new THREE.Group();group.userData.kind='membrane';const positions=[];const xo=(cols-1)*sx/2,zo=(rows-1)*sz/2;
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const x=c*sx-xo,z=r*sz-zo;const a=createPhospholipid(.42),b=createPhospholipid(.42);a.position.set(x,.95,z);b.position.set(x,-.95,z);b.rotation.x=Math.PI;group.add(a,b);positions.push({x,z});
+  }
+  [5,13,21,29,37,45].forEach((idx,i)=>{const p=positions[idx];if(!p)return;const c=createCholesterol(1);c.position.set(p.x+(i%2?.12:-.08),i%2?.15:-.10,p.z+(i%2?.06:-.06));if(i%2)c.rotation.x=Math.PI;group.add(c)});
+  const p1=createProtein(1);p1.position.set(-1.65,0,.1);const p2=createProtein(.88);p2.position.set(1.85,0,-1.05);p2.rotation.y=1.1;group.add(p1,p2);return group;
+}
+
+class SimpleOrbit{
+  constructor(camera,canvas,target=new THREE.Vector3()){this.camera=camera;this.canvas=canvas;this.target=target.clone();this.enabled=true;this.drag=false;this.moved=false;this.last={x:0,y:0};this.radius=8;this.theta=.7;this.phi=1.05;this.syncFromCamera();this.bind()}
+  syncFromCamera(){const v=this.camera.position.clone().sub(this.target);this.radius=Math.max(.5,v.length());this.theta=Math.atan2(v.x,v.z);this.phi=Math.acos(THREE.MathUtils.clamp(v.y/this.radius,-1,1));}
+  update(){this.phi=THREE.MathUtils.clamp(this.phi,.08,Math.PI-.08);this.radius=THREE.MathUtils.clamp(this.radius,1.4,28);const s=Math.sin(this.phi);this.camera.position.set(this.target.x+this.radius*s*Math.sin(this.theta),this.target.y+this.radius*Math.cos(this.phi),this.target.z+this.radius*s*Math.cos(this.theta));this.camera.lookAt(this.target)}
+  setView(pos,target){this.camera.position.copy(pos);this.target.copy(target);this.syncFromCamera();this.update()}
+  bind(){
+    this.canvas.addEventListener('pointerdown',e=>{if(!this.enabled||e.button!==0)return;this.drag=true;this.moved=false;this.last={x:e.clientX,y:e.clientY};this.canvas.setPointerCapture?.(e.pointerId)});
+    this.canvas.addEventListener('pointermove',e=>{if(!this.enabled||!this.drag)return;const dx=e.clientX-this.last.x,dy=e.clientY-this.last.y;if(Math.abs(dx)+Math.abs(dy)>2)this.moved=true;this.theta-=dx*.008;this.phi+=dy*.008;this.last={x:e.clientX,y:e.clientY};this.update()});
+    const end=()=>this.drag=false;this.canvas.addEventListener('pointerup',end);this.canvas.addEventListener('pointercancel',end);
+    this.canvas.addEventListener('wheel',e=>{if(!this.enabled)return;e.preventDefault();this.radius*=Math.exp(e.deltaY*.001);this.update()},{passive:false});
+  }
+}
+
+class ObjectManipulator{
+  constructor(camera,canvas,orbit,selectables=[]){this.camera=camera;this.canvas=canvas;this.orbit=orbit;this.selectables=selectables;this.selected=null;this.mode='translate';this.ray=new THREE.Raycaster();this.pointer=new THREE.Vector2();this.drag=false;this.last={x:0,y:0};this.box=new THREE.BoxHelper(new THREE.Object3D(),0x43ddd2);this.box.visible=false;this.box.material.depthTest=false;this.box.renderOrder=99;this.bind()}
+  attachScene(scene){scene.add(this.box)}
+  setMode(m){this.mode=m}
+  setSelectables(arr){this.selectables=arr}
+  select(obj){this.selected=obj||null;if(this.selected){this.box.setFromObject(this.selected);this.box.visible=true}else this.box.visible=false}
+  pick(e){const rect=this.canvas.getBoundingClientRect();this.pointer.x=((e.clientX-rect.left)/rect.width)*2-1;this.pointer.y=-((e.clientY-rect.top)/rect.height)*2+1;this.ray.setFromCamera(this.pointer,this.camera);const meshes=[];this.selectables.forEach(root=>root.traverse(o=>{if(o.isMesh)meshes.push(o)}));const hit=this.ray.intersectObjects(meshes,false)[0];if(!hit)return null;let cur=hit.object;while(cur.parent&&!this.selectables.includes(cur))cur=cur.parent;return this.selectables.includes(cur)?cur:null}
+  bind(){
+    this.canvas.addEventListener('dblclick',e=>{const obj=this.pick(e);this.select(obj)});
+    this.canvas.addEventListener('pointerdown',e=>{if(e.button!==0)return;const obj=this.pick(e);if(obj){this.select(obj);this.drag=true;this.last={x:e.clientX,y:e.clientY};this.orbit.enabled=false;e.stopPropagation()}});
+    this.canvas.addEventListener('pointermove',e=>{if(!this.drag||!this.selected)return;const dx=e.clientX-this.last.x,dy=e.clientY-this.last.y;this.last={x:e.clientX,y:e.clientY};if(this.mode==='rotate'){this.selected.rotation.y+=dx*.01;this.selected.rotation.x+=dy*.01}else{const right=new THREE.Vector3(1,0,0).applyQuaternion(this.camera.quaternion);const up=new THREE.Vector3(0,1,0).applyQuaternion(this.camera.quaternion);right.multiplyScalar(dx*.008);up.multiplyScalar(-dy*.008);this.selected.position.add(right).add(up)}this.box.setFromObject(this.selected)});
+    const end=()=>{if(this.drag){this.drag=false;this.orbit.enabled=true}};this.canvas.addEventListener('pointerup',end);this.canvas.addEventListener('pointercancel',end);
+  }
+}
+
+function resize(renderer,camera){const c=renderer.domElement,w=Math.max(1,c.clientWidth),h=Math.max(1,c.clientHeight);const pr=Math.min(window.devicePixelRatio||1,2);if(c.width!==Math.floor(w*pr)||c.height!==Math.floor(h*pr))renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+
+try{
+  // Module 1
+  const c1=document.getElementById('sceneMolecule');setStatus(c1,'正在载入 3D 模型…');const r1=makeRenderer(c1),s1=new THREE.Scene();makeLights(s1);s1.add(makeGridFloor(10));const cam1=new THREE.PerspectiveCamera(42,1,.1,100);const orb1=new SimpleOrbit(cam1,c1,new THREE.Vector3(0,.1,0));orb1.setView(new THREE.Vector3(3.8,2.6,5.3),new THREE.Vector3(0,.1,0));const mol1=createPhospholipid(1.25);s1.add(mol1);const halo=new THREE.Mesh(new THREE.TorusGeometry(2.2,.02,10,120),new THREE.MeshBasicMaterial({color:0x2f546d,transparent:true,opacity:.55}));halo.rotation.x=Math.PI/2;halo.position.y=-.2;s1.add(halo);let spin=true;document.getElementById('m1AutoSpin').onclick=e=>{spin=!spin;e.currentTarget.textContent='自动旋转：'+(spin?'开':'关')};document.getElementById('m1ResetView').onclick=()=>orb1.setView(new THREE.Vector3(3.8,2.6,5.3),new THREE.Vector3(0,.1,0));clearStatus(c1);
+
+  // Module 2
+  const c2=document.getElementById('sceneLab');setStatus(c2,'正在载入实验台…');
+  const r2=makeRenderer(c2),s2=new THREE.Scene();makeLights(s2);s2.add(makeGridFloor(15));
+  const cam2=new THREE.PerspectiveCamera(46,1,.1,100);const orb2=new SimpleOrbit(cam2,c2,new THREE.Vector3(0,0,0));
+  orb2.setView(new THREE.Vector3(7.8,5.2,8.2),new THREE.Vector3(0,0,0));
+
+  const water=createWaterBox(7.2,4.2,5.4,false);
+  const oil=createWaterBox(7.2,4.2,5.4,true);
+
+  // 油—水界面：下半部为水，上半部为油
+  const interfaceEnv=new THREE.Group();
+  const interfaceWater=createWaterBox(7.2,2.05,5.4,false);interfaceWater.position.y=-1.05;
+  const interfaceOil=createWaterBox(7.2,2.05,5.4,true);interfaceOil.position.y=1.05;
+  const interfacePlane=new THREE.Mesh(
+    new THREE.PlaneGeometry(7.0,5.2),
+    new THREE.MeshBasicMaterial({color:0xd9f3ff,transparent:true,opacity:.16,side:THREE.DoubleSide})
+  );
+  interfacePlane.rotation.x=-Math.PI/2;interfacePlane.position.y=0;
+  interfaceEnv.add(interfaceWater,interfaceOil,interfacePlane);
+
+  // 反胶束内部的小水核：只在自组装后显示
+  const waterCore=new THREE.Mesh(
+    new THREE.SphereGeometry(.46,28,28),
+    new THREE.MeshPhysicalMaterial({color:color.glassBlue,transparent:true,opacity:.34,roughness:.08,transmission:.40,clearcoat:.32})
+  );
+  waterCore.visible=false;
+
+  s2.add(water,waterCore);
+  let labMode='water',mols=[];
+  const manip2=new ObjectManipulator(cam2,c2,orb2,mols);manip2.attachScene(s2);
+  const envChip=document.getElementById('labEnvironmentChip');
+  const labHelp=document.getElementById('labHelp');
+  const btnWater=document.getElementById('labModeWater');
+  const btnOil=document.getElementById('labModeOil');
+  const btnInterface=document.getElementById('labModeInterface');
+
+  function syncSel(){manip2.setSelectables(mols)}
+  function addMol(){
+    const m=createPhospholipid(.58);
+    m.position.set((Math.random()-.5)*4.6,(Math.random()-.5)*1.8,(Math.random()-.5)*2.8);
+    m.rotation.set(Math.random()*Math.PI,Math.random()*Math.PI,Math.random()*Math.PI);
+    s2.add(m);mols.push(m);syncSel();return m
+  }
+  for(let i=0;i<12;i++)addMol();
+
+  function ensureCount(n){while(mols.length<n)addMol()}
+  function removeEnvironmentObjects(){
+    if(water.parent)s2.remove(water);
+    if(oil.parent)s2.remove(oil);
+    if(interfaceEnv.parent)s2.remove(interfaceEnv);
+    waterCore.visible=false;
+  }
+  function setMode(mode){
+    labMode=mode;removeEnvironmentObjects();
+    [btnWater,btnOil,btnInterface].forEach(b=>b.classList.remove('active'));
+    if(mode==='water'){
+      s2.add(water);btnWater.classList.add('active');
+      envChip.innerHTML='<span class="legend-dot" style="background:#4fa3ff"></span>水相 · 双分子层';
+      labHelp.innerHTML='<b>水相：</b> 亲水头朝向两侧水环境，疏水尾在膜中央相向靠近，形成连续的疏水核心；教学模型中不表现为明显交叉穿插。添加较多分子后会自动在 X–Z 平面铺成多列、多排。';
+    }else if(mode==='oil'){
+      s2.add(oil);btnOil.classList.add('active');
+      envChip.innerHTML='<span class="legend-dot" style="background:#f0bf68"></span>非极性油相（含少量水）· 反胶束';
+      labHelp.innerHTML='<b>油相（含少量水）：</b> 疏水尾朝向外部油相，亲水头聚向内部；自组装后蓝色球体表示被包围的少量水形成的“水核”。';
+    }else{
+      s2.add(interfaceEnv);btnInterface.classList.add('active');
+      envChip.innerHTML='<span class="legend-dot" style="background:#d9f3ff"></span>油—水界面 · 单分子层';
+      labHelp.innerHTML='<b>油—水界面：</b> 上方为油相、下方为水相。磷脂排列在分界面，蓝色亲水头朝下进入水相，两条疏水尾朝上伸入油相。';
+    }
+  }
+
+  function clearLab(){manip2.select(null);mols.forEach(m=>s2.remove(m));mols=[];syncSel();waterCore.visible=false}
+
+  function assembleWater(){
+    // 至少保证有一组可观察的双分子层；如果用户已经添加更多分子，则全部参与排列
+    ensureCount(20);
+
+    // 将分子平均分到双分子层的上下两层
+    const upper=[];
+    const lower=[];
+    mols.forEach((m,i)=>(i%2===0?upper:lower).push(m));
+
+    // 水槽有效区域略小于真实 BoxGeometry 尺寸，预留边缘，避免分子贴到或越出容器
+    const usableX=5.9;
+    const usableZ=4.25;
+    const aspect=usableX/usableZ;
+
+    function layoutLeaflet(list,y,flipped){
+      const count=list.length;
+      if(!count)return;
+
+      // 根据当前分子数量和水槽长宽比自动计算“多列 × 多排”
+      const cols=Math.max(1,Math.ceil(Math.sqrt(count*aspect)));
+      const rows=Math.max(1,Math.ceil(count/cols));
+
+      // 数量较少时保持舒展；数量增多时自动压缩间距，始终尽量留在水槽内部
+      const sx=cols>1?Math.min(.76,usableX/(cols-1)):0;
+      const sz=rows>1?Math.min(.76,usableZ/(rows-1)):0;
+      const x0=(cols-1)*sx/2;
+      const z0=(rows-1)*sz/2;
+
+      list.forEach((m,j)=>{
+        const row=Math.floor(j/cols);
+        const col=j%cols;
+        m.position.set(
+          col*sx-x0,
+          y,
+          row*sz-z0
+        );
+        m.rotation.set(
+          flipped?Math.PI:0,
+          (Math.random()-.5)*.10,
+          0
+        );
+      });
+    }
+
+    // 上层亲水头朝上、下层亲水头朝下。
+    // 两层适当拉开，使两侧疏水尾在膜中央相向靠近，而不是明显穿过彼此。
+    layoutLeaflet(upper,1.02,false);
+    layoutLeaflet(lower,-1.02,true);
+
+    waterCore.visible=false;
+    manip2.select(null);
+  }
+
+  function assembleReverseMicelle(){
+    ensureCount(22);
+    const n=mols.length,rad=1.10;
+    const up=new THREE.Vector3(0,1,0);
+    mols.forEach((m,i)=>{
+      // Fibonacci sphere：让分子均匀分布在球壳上
+      const y=1-(i/(n-1))*2;
+      const rr=Math.sqrt(Math.max(0,1-y*y));
+      const theta=i*Math.PI*(3-Math.sqrt(5));
+      const pos=new THREE.Vector3(Math.cos(theta)*rr*rad,y*rad,Math.sin(theta)*rr*rad);
+      m.position.copy(pos);
+      const inward=pos.clone().multiplyScalar(-1).normalize();
+      m.quaternion.setFromUnitVectors(up,inward); // 局部 +Y 是亲水头方向 → 指向水核
+    });
+    waterCore.position.set(0,0,0);waterCore.visible=true;manip2.select(null)
+  }
+
+  function assembleInterface(){
+    ensureCount(20);
+    const n=mols.length;
+    const cols=5,rows=Math.ceil(n/cols),sx=1.15,sz=.92;
+    const x0=(cols-1)*sx/2,z0=(rows-1)*sz/2;
+    mols.forEach((m,i)=>{
+      const col=i%cols,row=Math.floor(i/cols);
+      m.position.set(col*sx-x0,0.10,row*sz-z0);
+      m.rotation.set(Math.PI,0,0); // 头部朝下进水，尾部朝上进油
+    });
+    waterCore.visible=false;manip2.select(null)
+  }
+
+  btnWater.onclick=()=>setMode('water');
+  btnOil.onclick=()=>setMode('oil');
+  btnInterface.onclick=()=>setMode('interface');
+  document.getElementById('labAdd').onclick=addMol;
+  document.getElementById('labClear').onclick=clearLab;
+  document.getElementById('labAssemble').onclick=()=>{
+    if(labMode==='water')assembleWater();
+    else if(labMode==='oil')assembleReverseMicelle();
+    else assembleInterface();
+  };
+  document.getElementById('labTransformTranslate').onclick=()=>manip2.setMode('translate');
+  document.getElementById('labTransformRotate').onclick=()=>manip2.setMode('rotate');
+  document.getElementById('labResetView').onclick=()=>orb2.setView(new THREE.Vector3(7.8,5.2,8.2),new THREE.Vector3(0,0,0));
+  clearStatus(c2);
+
+  // Module 3
+  const c3=document.getElementById('sceneMembrane');setStatus(c3,'正在载入膜模型…');const r3=makeRenderer(c3),s3=new THREE.Scene();makeLights(s3);s3.add(makeGridFloor(18));const cam3=new THREE.PerspectiveCamera(42,1,.1,100);const orb3=new SimpleOrbit(cam3,c3,new THREE.Vector3(0,0,0));orb3.setView(new THREE.Vector3(8.6,6.8,9.5),new THREE.Vector3(0,0,0));const membrane=createBilayer();membrane.position.set(0,.25,0);s3.add(membrane);const slab=new THREE.Mesh(new THREE.BoxGeometry(10,2.45,4.6),new THREE.MeshPhysicalMaterial({color:0x7cc6ff,transparent:true,opacity:.035,roughness:.08,transmission:.35,clearcoat:.25}));slab.position.copy(membrane.position);s3.add(slab);const manip3=new ObjectManipulator(cam3,c3,orb3,[membrane]);manip3.attachScene(s3);manip3.select(membrane);
+  function view(type){if(type==='overall')orb3.setView(new THREE.Vector3(8.6,6.8,9.5),new THREE.Vector3(0,0,0));if(type==='local')orb3.setView(new THREE.Vector3(3.4,2.7,4.1),new THREE.Vector3(.8,.1,-.6));if(type==='side')orb3.setView(new THREE.Vector3(10,.8,.2),new THREE.Vector3(0,0,0));if(type==='top')orb3.setView(new THREE.Vector3(.1,12,.1),new THREE.Vector3(0,0,0))}
+  document.getElementById('memViewOverall').onclick=()=>view('overall');document.getElementById('memViewLocal').onclick=()=>view('local');document.getElementById('memViewSide').onclick=()=>view('side');document.getElementById('memViewTop').onclick=()=>view('top');document.getElementById('memTransformTranslate').onclick=()=>manip3.setMode('translate');document.getElementById('memTransformRotate').onclick=()=>manip3.setMode('rotate');document.getElementById('memResetObj').onclick=()=>{membrane.position.set(0,.25,0);membrane.rotation.set(0,0,0);slab.position.copy(membrane.position);slab.rotation.copy(membrane.rotation);manip3.box.setFromObject(membrane)};document.getElementById('memResetView').onclick=()=>view('overall');clearStatus(c3);
+
+  function frame(){requestAnimationFrame(frame);if(spin)mol1.rotation.y+=.0065;halo.rotation.z+=.002;slab.position.copy(membrane.position);slab.rotation.copy(membrane.rotation);if(manip3.selected)manip3.box.setFromObject(membrane);resize(r1,cam1);resize(r2,cam2);resize(r3,cam3);r1.render(s1,cam1);r2.render(s2,cam2);r3.render(s3,cam3)}frame();
+}catch(err){console.error(err);document.querySelectorAll('canvas.webgl').forEach(c=>setStatus(c,'3D 初始化失败：'+(err?.message||String(err)),true));}
+
+</script>
+</body>
+</html>
